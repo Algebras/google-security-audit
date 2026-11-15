@@ -87,6 +87,9 @@ def line_of(text: str, idx: int) -> int:
     return text.count("\n", 0, idx) + 1
 
 
+if os.name == "nt":  # enable ANSI colours in Windows consoles
+    os.system("")
+
 _COLORS = {"info": "36", "ok": "32", "warn": "33", "err": "31", "head": "1;35"}
 
 

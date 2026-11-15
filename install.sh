@@ -16,6 +16,5 @@ fi
 $PW install chromium >/dev/null 2>&1 || echo "Note: run 'playwright install chromium' if the login browser fails to open."
 
 echo
-echo "Installed. Next:"
-echo "  gsa scan ./path/to/repo --target http://localhost:3000"
-echo "Results upload automatically to https://local-scan-audit-results.vercel.app"
+echo "Installed. Next, start your app locally and run:"
+echo "  gsa scan /path/to/your-app http://localhost:3000"

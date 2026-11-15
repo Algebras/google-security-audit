@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -30,9 +31,11 @@ def parse_args(argv=None):
     ap.add_argument("--version", action="version", version=f"gsa {__version__}")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    s = sub.add_parser("scan", help="Scan a repo (static) and optionally a running instance of it (dynamic).")
-    s.add_argument("repo", help="Path to a local repo, or a git URL to clone")
-    s.add_argument("--target", "-t", help="Base URL of the running app to test, e.g. http://localhost:3000")
+    s = sub.add_parser("scan", help="Scan a project folder and (optionally) its running local server.",
+                       usage="gsa scan FOLDER [URL] [options]   e.g.  gsa scan ~/Desktop/myapp http://localhost:3000")
+    s.add_argument("repo", metavar="FOLDER", help="Path to the project folder (or a git URL to clone)")
+    s.add_argument("url", metavar="URL", nargs="?", help="Address of the running app, e.g. http://localhost:3000 (omit for a code-only scan)")
+    s.add_argument("--target", "-t", help=argparse.SUPPRESS)  # legacy flag, same as URL
     s.add_argument("--login-url", help="URL to open for interactive login (default: target)")
     s.add_argument("--login", choices=["auto", "browser", "manual", "never"], default="auto",
                    help="auto: open a browser if endpoints return 401/403 (default)")
@@ -59,9 +62,42 @@ def parse_args(argv=None):
     return ap.parse_args(argv)
 
 
+LOCAL_RX = re.compile(r"(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?(/\S*)?", re.I)
+
+
+def _bad_url(raw):
+    log(f"'{raw}' doesn't look like an address. Use the URL your app prints, e.g. http://localhost:3000", "err")
+    sys.exit(2)
+
+
+def normalize_url(raw: str) -> str:
+    """Accept 'http://localhost:3000', 'localhost:3000', '127.0.0.1:8000/', and fix common typos
+    such as 'http//localhost:3000' or 'httpl/localhost:3000'."""
+    t = raw.strip().strip('"\'')
+    if not re.match(r"^https?://", t, re.I):
+        first = re.split(r"[/:]", t, 1)[0]
+        looks_like_host = first.lower() in ("localhost", "127.0.0.1", "0.0.0.0") or "." in first or first.startswith("[")
+        if "://" in t or not looks_like_host:
+            m = LOCAL_RX.search(t)
+            if not m:
+                _bad_url(raw)
+            t = m.group(0)
+            log(f"Interpreting '{raw}' as http://{t}", "warn")
+        t = "http://" + t
+    if not urlparse(t).hostname:
+        _bad_url(raw)
+    return t.rstrip("/")
+
+
 def resolve_repo(spec: str):
+    spec = spec.strip().strip('"\'')
     p = Path(spec).expanduser()
+    if not p.exists() and not p.is_absolute() and (Path.home() / spec).exists():
+        p = Path.home() / spec  # allow "Desktop/myapp" from any directory
     if p.exists():
+        if not p.is_dir():
+            log(f"{p} is a file. Pass the project folder instead.", "err")
+            sys.exit(2)
         return p.resolve(), None
     if spec.startswith(("http://", "https://", "git@")):
         tmp = Path(tempfile.mkdtemp(prefix="gsa-"))
@@ -71,7 +107,7 @@ def resolve_repo(spec: str):
             log(r.stderr.strip(), "err")
             sys.exit(2)
         return tmp / "repo", tmp
-    log(f"Repo not found: {spec}", "err")
+    log(f"Folder not found: {spec}  (tip: drag the folder into the terminal to paste its full path)", "err")
     sys.exit(2)
 
 
@@ -80,7 +116,10 @@ def confirm_target(target: str, yes: bool):
     if host in LOCAL_HOSTS or host.endswith(".local") or yes:
         return
     print(f"\nYou are about to send active test traffic (fuzzing, bursts) to: {target}")
-    ans = input("Confirm you own this system or are authorized to test it [y/N]: ").strip().lower()
+    try:
+        ans = input("Confirm you own this system or are authorized to test it [y/N]: ").strip().lower()
+    except EOFError:
+        ans = ""
     if ans not in ("y", "yes"):
         log("Aborted.", "err")
         sys.exit(1)
@@ -88,6 +127,10 @@ def confirm_target(target: str, yes: bool):
 
 def scan(a) -> int:
     started = time.time()
+    if a.url and a.target and normalize_url(a.url) != normalize_url(a.target):
+        log("Give the app address once (as the second argument).", "err")
+        return 2
+    a.target = normalize_url(a.url or a.target) if (a.url or a.target) else None
     root, tmp = resolve_repo(a.repo)
     ctx = Context(repo=root)
     who = device_user()
