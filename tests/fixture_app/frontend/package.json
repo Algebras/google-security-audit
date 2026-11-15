@@ -1,0 +1,10 @@
+{
+  "name": "fixture-frontend",
+  "private": true,
+  "dependencies": {
+    "axios": "0.21.1",
+    "react": "^18.2.0",
+    "@sentry/react": "^7.0.0",
+    "lodash": "4.17.15"
+  }
+}
