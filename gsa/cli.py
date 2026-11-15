@@ -51,9 +51,8 @@ def parse_args(argv=None):
     s.add_argument("--yes", "-y", action="store_true", help="Skip the authorization confirmation for non-local targets")
     s.add_argument("--note", help="Free-text note shown on the dashboard")
 
-    c = sub.add_parser("configure", help="Save dashboard endpoint and upload token")
-    c.add_argument("--endpoint")
-    c.add_argument("--token")
+    c = sub.add_parser("configure", help="Point uploads at a different dashboard (default: the team dashboard)")
+    c.add_argument("--endpoint", required=True)
 
     u = sub.add_parser("upload", help="Upload a saved report JSON")
     u.add_argument("file")
@@ -198,9 +197,8 @@ def scan(a) -> int:
 def main(argv=None) -> int:
     a = parse_args(argv)
     if a.cmd == "configure":
-        save_config(a.endpoint, a.token)
-        cfg = load_config()
-        log(f"Endpoint: {cfg['endpoint']}  Token: {'set' if cfg.get('upload_token') else 'missing'}")
+        save_config(a.endpoint)
+        log(f"Uploads will go to: {load_config()['endpoint']}")
         return 0
     if a.cmd == "upload":
         return 0 if upload_file(Path(a.file)) else 1

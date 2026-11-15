@@ -43,8 +43,16 @@ def repo_info(root: Path) -> dict:
     # strip credentials from remote URLs
     if "@" in remote and remote.startswith("http"):
         remote = "https://" + remote.split("@", 1)[1]
+    name = remote.rstrip("/").split("/")[-1].removesuffix(".git") if remote else root.resolve().name
+    top = _run(["git", "-C", str(root), "rev-parse", "--show-toplevel"])
+    subpath = None
+    if top and Path(top).resolve() != root.resolve():
+        # scanning a sub-folder of a bigger repo: label it by the folder actually scanned
+        subpath = str(root.resolve().relative_to(Path(top).resolve()))
+        name = root.resolve().name
     return {
-        "name": (remote.rstrip("/").split("/")[-1].removesuffix(".git") if remote else root.resolve().name),
+        "name": name,
+        "path": subpath,
         "remote": remote or None,
         "branch": _run(["git", "-C", str(root), "rev-parse", "--abbrev-ref", "HEAD"]) or None,
         "commit": _run(["git", "-C", str(root), "rev-parse", "--short", "HEAD"]) or None,

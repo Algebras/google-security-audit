@@ -12,7 +12,6 @@ the results** to the team dashboard when it finishes.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Algebras/google-security-audit/main/install.sh | bash
-gsa configure --token <team upload token>      # ask Ansel for the token
 ```
 
 Or manually: `pip install "google-security-audit[browser] @ git+https://github.com/Algebras/google-security-audit.git" && playwright install chromium`.
@@ -31,7 +30,8 @@ gsa scan https://github.com/org/repo.git
 gsa scan . --target https://staging.example.com --cookie "sessionid=…" -H "Authorization: Bearer …"
 ```
 
-Results open at **https://local-scan-audit-results.vercel.app** (team PIN required) and a copy is saved locally
+Results upload automatically — no token or sign-up — and open at **https://local-scan-audit-results.vercel.app**
+(team PIN required to view). Each scan is labelled with your laptop username, the date/time and the repo name. A copy is saved locally
 as `gsa-report-<time>.json`. If the upload fails, the report is queued in `~/.gsa/pending/` — retry with `gsa upload <file>`.
 
 ## What it does
@@ -66,11 +66,11 @@ gsa scan REPO [--target URL] [--login-url URL] [--login auto|browser|manual|neve
               [--cookie STR] [-H "Name: value"]... [--fuzz-level 0-3] [--rps N]
               [--max-requests N] [--burst N] [--allow-destructive] [--insecure]
               [--no-osv] [--no-external] [--no-upload] [--out FILE] [--note TEXT] [-y]
-gsa configure [--endpoint URL] [--token TOKEN]     # stored in ~/.gsa/config.json (0600)
+gsa configure --endpoint URL     # only if you run your own dashboard; stored in ~/.gsa/config.json
 gsa upload FILE
 ```
 
-Env overrides: `GSA_ENDPOINT`, `GSA_UPLOAD_TOKEN`, `SECLISTS`.
+Env overrides: `GSA_ENDPOINT`, `SECLISTS`.
 
 ## Develop
 

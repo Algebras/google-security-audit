@@ -10,6 +10,7 @@ from typing import Optional
 
 import requests
 
+from .client import UA
 from .util import log
 
 # Shared team dashboard. Override with GSA_ENDPOINT or `gsa configure --endpoint`.
@@ -28,11 +29,10 @@ def load_config() -> dict:
         except Exception:
             pass
     cfg["endpoint"] = os.environ.get("GSA_ENDPOINT") or cfg.get("endpoint") or DEFAULT_ENDPOINT
-    cfg["upload_token"] = os.environ.get("GSA_UPLOAD_TOKEN") or cfg.get("upload_token")
     return cfg
 
 
-def save_config(endpoint: Optional[str], token: Optional[str]):
+def save_config(endpoint: Optional[str]):
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     cfg = {}
     if CONFIG_FILE.exists():
@@ -40,10 +40,9 @@ def save_config(endpoint: Optional[str], token: Optional[str]):
             cfg = json.loads(CONFIG_FILE.read_text())
         except Exception:
             pass
+    cfg.pop("upload_token", None)  # tokens are no longer used
     if endpoint:
         cfg["endpoint"] = endpoint.rstrip("/")
-    if token:
-        cfg["upload_token"] = token
     CONFIG_FILE.write_text(json.dumps(cfg, indent=2))
     try:
         CONFIG_FILE.chmod(0o600)
@@ -54,11 +53,6 @@ def save_config(endpoint: Optional[str], token: Optional[str]):
 
 def upload(report: dict, cfg: Optional[dict] = None) -> Optional[str]:
     cfg = cfg or load_config()
-    token = cfg.get("upload_token")
-    if not token:
-        log("No upload token configured. Run: gsa configure --token <team upload token>", "warn")
-        _save_pending(report)
-        return None
     url = cfg["endpoint"].rstrip("/") + "/api/ingest/"
     body = gzip.compress(json.dumps(report, default=str).encode())
     if len(body) > 4_000_000:
@@ -67,7 +61,7 @@ def upload(report: dict, cfg: Optional[dict] = None) -> Optional[str]:
         report.pop("probe", None)
         report.pop("inputs", None)
         body = gzip.compress(json.dumps(report, default=str).encode())
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json", "Content-Encoding": "gzip"}
+    headers = {"User-Agent": UA, "Content-Type": "application/json", "Content-Encoding": "gzip"}
     for attempt in range(3):
         try:
             r = requests.post(url, data=body, headers=headers, timeout=60)
@@ -77,7 +71,7 @@ def upload(report: dict, cfg: Optional[dict] = None) -> Optional[str]:
                 log(f"Uploaded. View results: {link}", "ok")
                 return link
             log(f"Upload failed: HTTP {r.status_code} {r.text[:200]}", "err")
-            if r.status_code in (400, 401, 403, 413):
+            if r.status_code in (400, 403, 413):
                 break
         except requests.RequestException as e:
             log(f"Upload error: {e}", "err")
