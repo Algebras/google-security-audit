@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+gsa-report-*.json
+tests/fixture_app/demo.sqlite3
+.pytest_cache/
+.DS_Store

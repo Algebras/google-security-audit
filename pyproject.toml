@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "google-security-audit"
+version = "0.1.0"
+description = "Local security harness: discovers endpoints in a repo, fuzzes a running instance, maps schema/deps/infra, and uploads results to a shared dashboard."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [{ name = "Algebras" }]
+dependencies = [
+  "requests>=2.31",
+  "PyYAML>=6.0",
+  "tomli>=2.0; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+browser = ["playwright>=1.40"]
+
+[project.scripts]
+gsa = "gsa.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["gsa*"]
