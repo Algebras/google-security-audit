@@ -150,6 +150,17 @@ When the scan finishes, the terminal shows a summary of what was found.
 | **Hosting & database provider** | Response headers, DNS/ASN, deploy configs (vercel.json, fly.toml, Procfile, wrangler.toml…) and connection strings (Neon, Supabase, RDS, PlanetScale, Atlas, Upstash…). |
 | **Extras** | Security headers, CORS, cookie flags, exposed `.env`/`.git`/actuator paths, hardcoded secrets (masked). |
 
+## Inspired by
+
+google-security-audit borrows ideas from these projects:
+
+| Project | What we took from it |
+|---|---|
+| [Arachni](https://github.com/Arachni/arachni) | Crawling an app's endpoints and fuzzing every input of a running instance (DAST). |
+| [Cloudflare Security Audit Skill](https://github.com/cloudflare/security-audit-skill) | A multi-phase, adversarial security review of a codebase. |
+| [CodeQL](https://github.com/github/codeql) | Reading source code to trace where user input flows (routes, handlers, models) rather than only probing from outside. |
+| [GitHub audit logs](https://github.com/github/docs/blob/main/content/organizations/keeping-your-organization-secure/managing-security-settings-for-your-organization/reviewing-the-audit-log-for-your-organization.md) | Recording who did what and when: every scan is attributed to a person, a time and a repo. |
+
 ## Privacy & safety
 
 - Each scan is labelled with **the username of the laptop that ran it**, the date and time, and the project folder's name.
